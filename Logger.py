@@ -47,17 +47,23 @@ class Logger:
         temp = cursor.fetchone()[0]
         self.missionNr = 0
         if(temp != None):
-            self.missionNr = int(temp)
+            self.missionNr = int(temp)+1
         conn.close()
     
-    #Getts the data from the raspberry and stores it in the dictonary. It will take some samples of data and calculate the 
+    #Getts the data from the raspberry and stores it in the dictonary. It will take some samples of data and calculate the
+    #Returns true if succesfully connected and false if not
+    #If no connection after 9 trys (1min) then it will return false
     def collect_data(self):
         catSer = None  #Serial for cat comunication
         collected = False
-        while(not collected):
-            while(catSer == None):
+        j = 0
+        while(not collected):    
+            while(catSer == None and j < 9):
                 catSer = self.connect.getCat()
                 #here we move the servo to get connection.
+                j = j+1
+            if(j >= 9):
+                return False
             #List of all the inputts
             tempCats = []
             Phs = []
@@ -128,6 +134,7 @@ class Logger:
         #Insert the answer in the dictonary
         waypointID = self.waypointID+1
         self.data_dict['Waypoint'] = [waypointID,time,cordinates,catID,fishID,0,self.missionNr]
+        return True
     
     #Checks if we do not get any values or it times out
     def collect_loop(self, nr, ser):
@@ -157,7 +164,7 @@ class Logger:
     def print_data(self):
         print ("Catvalues = temp: {1:f}, PH: {2:f},turb: {3:f},TDS : {4:f}, Vcond: {5:f}, ecCond {6:f}, DisOxy: {7:f} ".format(*self.data_dict['CatData']))
         print ("Fishvalues = temp: {1:f}, disOxy: {2:f}, turb: {3:f}".format(*self.data_dict['FishData']))
-        print ("Time: {1:%Y-%m-%d} Cordinates: {2:f}, catID: {3:d}, fishID: {4:d}, sent: {5,f}, missionNr: {6:f}".format(*self.data_dict['Waypoint']))
+        print ("Time: {1:%Y-%m-%d} Cordinates: {2:f}, catID: {3:d}, fishID: {4:d}, sent: {5,d}, missionNr: {6:d}".format(*self.data_dict['Waypoint']))
     
     #putts the data in the local database
     def logg_data(self):
@@ -172,15 +179,15 @@ class Logger:
                 cursor.execute(f"INSERT INTO {table} VALUES("+params+")",data)
         self.catID = self.catID + 1
         self.fishID = self.fishID + 1
-        cursor.execute(f"INSERT INTO {table} VALUES("+'?,?,?,?'+")",data)
+        cursor.execute(f"INSERT INTO {table} VALUES("+'?,?,?,?,?,?,?'+")",data)
         conn.commit()
         conn.close()
         
 
 def main():
     logg = Logger()
-    logg.collect_data()
-    #logg.print_data()
-    logg.logg_data()
-    
-main()
+    success = logg.collect_data()
+    if(success):
+        logg.logg_data()
+    else:
+        print("fail")
