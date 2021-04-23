@@ -1,6 +1,22 @@
 import socket
 import sqlite3
 import json
+import dns
+import dns.resolver
+from dns import reversename, resolver
+
+def getDNS():
+    rev_name = reversename.from_address('77.218.34.13')
+    reversed_dns = str(resolver.resolve(rev_name,"PTR")[0])
+    print (reversed_dns)
+
+def getIP():
+    result = dns.resolver.resolve('c77-218-34-13.bredband.comhem.se', 'A')
+    #result = dns.resolver.resolve('anyresolver2.comhem.se', 'A') #vi får ipv4 addressen för DNSen
+    for ipval in result:
+        print('IP', ipval.to_text())
+    return ipval.to_text()
+
 
 #returns a list of all the rows that are not sent to the main database
 def getNonSent():
@@ -15,7 +31,7 @@ def getNonSent():
 
 #connecting to the server
 def client_connect():
-    host = '192.168.0.36'
+    host = '77.218.34.13'#router temp global ip'77.218.34.13'# Local server ip'192.168.0.36'
     port = 5000  # socket server port number
 
     client_socket = socket.socket()  # instantiate
@@ -37,22 +53,22 @@ def client_program(client_socket, d):
     conn.close()
 
 #the main for the code. When this runns it will try to send the data to the main database.
-#It returns 1 if it has no more data to send and 0 if there might be more data to send
+#It returns False if it has no more data to send and True if there might be more data to send
 def sendData():
     tosend = getNonSent()
     if tosend:
-        client_socket = client_connect()
-        for x in tosend:
-            client_program(client_socket,x)
-        client_socket.close()
-        return 0
-    return 1
+        print(tosend)
+        try: 
+            client_socket = client_connect()
+            for x in tosend:
+                client_program(client_socket,x)
+            client_socket.close()
+        except:
+            print("no internet connection or the server is down")
+            return False
+    return True
 
 if __name__ == '__main__':
-    tosend = getNonSent()
-    if tosend:
-        client_socket = client_connect()
-        for x in tosend:
-            client_program(client_socket,x)
-        client_socket.close()  
-    
+    print(sendData())
+            
+        
