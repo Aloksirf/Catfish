@@ -55,15 +55,19 @@ class Logger:
     #If no connection after 9 trys (1min) then it will return false
     def collect_data(self):
         catSer = None  #Serial for cat comunication
+        fishSer = None 
         collected = False
         j = 0
         while(not collected):    
-            while(catSer == None and j < 9):
+            while(catSer == None or fishSer == None):
+                if(j >= 9):
+                    return False
+                self.connect.loop()
                 catSer = self.connect.getCat()
+                fishSer = self.connect.getFish()
                 #here we move the servo to get connection.
                 j = j+1
-            if(j >= 9):
-                return False
+            
             #List of all the inputts
             tempCats = []
             Phs = []
@@ -72,8 +76,12 @@ class Logger:
             voltConds = []
             ecConds = []
             dissolvedOxygenCats = []
+            tempFishs = []
+            dissolvedOxygenFishs = []
+            turbidityFishs = []
             #Collecting the data from the arduino
             try:
+                print("star cat mes")
                 for x in range(6):
                     tempCats.append(self.collect_loop('1', catSer))
                     Phs.append(self.collect_loop('2', catSer))
@@ -82,6 +90,18 @@ class Logger:
                     voltConds.append(self.collect_loop('5', catSer))
                     ecConds.append(self.get_from_arduino(catSer))
                     dissolvedOxygenCats.append(self.collect_loop('6', catSer))
+                #Calculate the mode/mean for the values
+                tempCat = Maths.modeMean(tempCats)
+                Ph = Maths.modeMean(Phs)
+                turbidityCat = Maths.modeMean(turbidityCats)
+                TDS = Maths.modeMean(TDSs)
+                voltCond = Maths.modeMean(voltConds)
+                ecCond = Maths.modeMean(ecConds)
+                dissolvedOxygenCat = Maths.modeMean(dissolvedOxygenCats)
+                print("cat mes over")
+                catID = self.catID+1
+                self.data_dict['CatData'] = [catID,tempCat,Ph,turbidityCat,TDS,voltCond,ecCond,dissolvedOxygenCat]
+                
                 collected = True
             #if connection is broken start over
             except:
@@ -92,49 +112,56 @@ class Logger:
                 voltConds.clear()
                 ecConds.clear()
                 dissolvedOxygenCats.clear()
+                tempFishs.clear()
+                dissolvedOxygenFishs.clear()
+                turbidityFishs.clear()
                 self.connect.disConnect()
                 catSer = None
+                fishSer = None
                 collected = False
             
-        #Calculate the mode/mean for the values
-        tempCat = Maths.modeMean(tempCats)
-        Ph = Maths.modeMean(Phs)
-        turbidityCat = Maths.modeMean(turbidityCats)
-        TDS = Maths.modeMean(TDSs)
-        voltCond = Maths.modeMean(voltConds)
-        ecCond = Maths.modeMean(ecConds)
-        dissolvedOxygenCat = Maths.modeMean(dissolvedOxygenCats)
-        
-        catID = self.catID+1
-        self.data_dict['CatData'] = [catID,tempCat,Ph,turbidityCat,TDS,voltCond,ecCond,dissolvedOxygenCat]
-        
-        fishSer = None #Serial comunication with fish
-        while(fishSer == None):
-            fishSer = self.connect.getFish()
-        #Lists of all inputs
-        tempFishs = []
-        dissolvedOxygenFishs = []
-        turbidityFishs = []
-        #collect the data
-        for x in range(6):
-            tempFishs.append(self.collect_loop('1', fishSer))
-            dissolvedOxygenFishs.append(self.collect_loop('2', fishSer))
-            turbidityFishs.append(self.collect_loop('3',fishSer))
-        #get the mode/mean from the data
-        tempFish = Maths.modeMean(tempFishs)
-        dissolvedOxygenFish = Maths.modeMean(dissolvedOxygenFishs)
-        turbidityFish = Maths.modeMean(turbidityFishs) 
-        #Insert the answer in the dictonary
-        fishID = self.fishID+1
-        self.data_dict['FishData'] = [fishID,tempFish,dissolvedOxygenFish,turbidityFish]
-        
-        #here we need to get the cordinates and the time from the pixhawk.
-        cordinates = random.randint(0,100)
-        time = datetime.now()
-        #Insert the answer in the dictonary
-        waypointID = self.waypointID+1
-        self.data_dict['Waypoint'] = [waypointID,time,cordinates,catID,fishID,0,self.missionNr]
-        return True
+       
+            if(collected):
+                #collect the data
+                try:
+                    print("start fish mes")
+                    for x in range(6):
+                        tempFishs.append(self.collect_loop('1', fishSer))
+                        dissolvedOxygenFishs.append(self.collect_loop('2', fishSer))
+                        turbidityFishs.append(self.collect_loop('3',fishSer))
+                    print("fish mes over")
+                    #get the mode/mean from the data
+                    tempFish = Maths.modeMean(tempFishs)
+                    dissolvedOxygenFish = Maths.modeMean(dissolvedOxygenFishs)
+                    turbidityFish = Maths.modeMean(turbidityFishs) 
+                    #Insert the answer in the dictonary
+                    fishID = self.fishID+1
+                    self.data_dict['FishData'] = [fishID,tempFish,dissolvedOxygenFish,turbidityFish]
+                    
+                    #here we need to get the cordinates and the time from the pixhawk.
+                    cordinates = random.randint(0,100)
+                    time = datetime.now()
+                    #Insert the answer in the dictonary
+                    waypointID = self.waypointID+1
+                    self.data_dict['Waypoint'] = [waypointID,time,cordinates,catID,fishID,0,self.missionNr]
+                    self.connect.disConnect()
+                    return True
+                except:
+                        tempFishs.clear()
+                        dissolvedOxygenFishs.clear()
+                        turbidityFishs.clear()
+                        tempCats.clear()
+                        Phs.clear()
+                        turbidityCats.clear()
+                        TDSs.clear()
+                        voltConds.clear()
+                        ecConds.clear()
+                        dissolvedOxygenCats.clear()
+                        self.connect.disConnect()
+                        fishSer = None
+                        catSer = None
+                        collected = False
+           
     
     #Checks if we do not get any values or it times out
     def collect_loop(self, nr, ser):
@@ -179,6 +206,7 @@ class Logger:
                 cursor.execute(f"INSERT INTO {table} VALUES("+params+")",data)
         self.catID = self.catID + 1
         self.fishID = self.fishID + 1
+        self.waypointID = self.waypointID + 1
         cursor.execute(f"INSERT INTO {table} VALUES("+'?,?,?,?,?,?,?'+")",data)
         conn.commit()
         conn.close()
