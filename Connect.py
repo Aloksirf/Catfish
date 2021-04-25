@@ -34,7 +34,7 @@ class Connect:
     def loop(self):
         self.connect()
         t = time.time();
-        while(time.time() - t < 7):
+        while(time.time() - t < 6):
             try:
                 if(self.con):
                     self.ser0.write((bytes)('H'.encode()))
@@ -69,7 +69,6 @@ class Connect:
     
     #Returns null if it doesn't work, after it tries to connect. (Null means that you have to move the servo.)
     def getCat(self):
-        self.loop()
         if(self.case != 0 and self.con != False):
             if(self.case == 1):
                 return self.ser0
@@ -80,7 +79,6 @@ class Connect:
     
     #Returns null if it doesn't work, after it tries to connect. (Null means that you have to move the servo.)
     def getFish(self):
-        self.loop()
         if(self.case != 0 and self.con != False):
             if(self.case == 1):
                 return self.ser1
