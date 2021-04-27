@@ -35,11 +35,12 @@ def set_servo_pulse(channel, pulse):
     pwm.set_pwm(channel, 0, pulse)
 
 # Set frequency to 60hz, good for servos.
-pwm.set_pwm_freq(60)
+pwm.se_pwm_freq(60)
 
 print('Moving servo on channel 0, press Ctrl-C to quit...')
-    # Move servo clockwise  on channel O time_Z, hold time_H, then counter clockwise time_Z.
+# Move servo clockwise  on channel O time_Z, hold time_H, then counter clockwise time_Z.
 time_Z = 10
+
 time_H = 20
 
 pwm.set_pwm(0, 0, servo_min)
@@ -48,4 +49,4 @@ pwm.set_pwm(0, 0, servo_still)
 time.sleep(time_H)            #Go to Ellen and Ek's sensor codes
 pwm.set_pwm(0, 0, servo_max)
 time.sleep(time_Z)
-pwm.set_pwm(0, 0, servo_still)    
+pwm.set_pwm(0, 0, servo_still)
